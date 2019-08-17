@@ -1,0 +1,257 @@
+# Create Docker Container
+# sudo docker run --restart=always -d --name="home-assistant" -v /volume1/docker/home_assistant:/config --device=/dev/ttyUSB-ZStick-5G:/dev/ttyUSB-ZStick-5G -e TZ=America/Detroit --net=host homeassistant/home-assistant
+
+# Example theme
+# https://github.com/isabellaalstrom/home-assistant-config/blob/master/configuration.yaml
+homeassistant:
+  latitude: !secret latitude
+  longitude: !secret longitude
+  elevation: !secret elevation
+  unit_system: imperial
+  time_zone: America/Detroit
+  auth_providers:
+    - type: homeassistant
+    - type: trusted_networks
+      trusted_networks:
+        - !secret trusted_network_1
+  auth_mfa_modules:
+    - type: totp
+
+  # Customization file
+  customize: !include customize.yaml
+  
+system_health:
+
+# Enables the frontend
+frontend:
+  themes: !include_dir_named themes
+
+# Enables configuration UI
+config:
+
+lovelace:
+  mode: yaml
+
+http:
+  base_url: !secret base_url
+  ssl_certificate: /config/ssl/cert.pem
+  ssl_key: /config/ssl/privkey.pem
+  use_x_forwarded_for: true
+  # https://community.home-assistant.io/t/trusted-networks-when-using-nginx-reverse-proxy/37836/7
+  trusted_proxies:
+    - 127.0.0.1 # local host
+    - ::1 # All IPv6 that have leading zeros and end with 1
+    # - 192.168.86.0/24 # IP/netmask, where the first 24 bits are the subnet. 192.168.0 is a common default subnet for households.
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
+# Checks for available updates
+# Note: This component will send some information about your system to
+# the developers to assist with development of Home Assistant.
+# For more information, please see:
+# https://home-assistant.io/blog/2016/10/25/explaining-the-updater/
+updater:
+  # Optional, allows Home Assistant developers to focus on popular components.
+  # include_used_components: true
+  
+logger:
+  default: info
+  
+# Discover some devices automatically
+discovery:
+  ignore:
+    - apple_tv
+  #enable:
+  #  - homekit
+
+# Allows you to issue voice commands from the frontend in enabled browsers
+conversation:
+
+# Text to speech
+tts:
+  - platform: google_translate
+
+# Redirect output to Synology NAS Maria DB
+recorder:
+  db_url: !secret mariadb_url
+
+# Enables support for tracking state changes over time
+history:
+
+# View all events in a logbook
+logbook:
+
+# Enables a map showing the location of tracked devices
+map:
+
+# Track the sun
+sun:
+
+weather:
+  - platform: darksky
+    api_key: !secret darksky_api_key
+    
+alarm_control_panel:
+  - platform: manual
+    code: !secret alarm_code
+
+# Weather prediction
+sensor:
+  - platform: yr
+  - platform: google_wifi
+  - platform: aarlo
+    monitored_conditions:
+      - captured_today
+      - last_capture
+      - total_cameras
+      - battery_level
+      - signal_strength
+  - platform: authenticated
+  - platform: template
+    sensors:
+      occupancy_state:
+        value_template: >- 
+          {% if is_state('input_boolean.people_home', 'on') %}
+            Home
+          {% else %}
+            Away
+          {% endif %}
+        icon_template: >-
+          {% if is_state('input_boolean.people_home', 'on') %}
+            mdi:home
+          {% else %}
+            mdi:walk
+          {% endif %}
+        friendly_name: 'Occupancy'
+        
+binary_sensor:
+  - platform: aarlo
+    monitored_conditions:
+    - motion
+    - sound
+    
+input_boolean:
+  people_home:
+    name: Home
+    icon: mdi:account
+  
+scene:
+  - name: Lock Up
+    entities:
+      group.all_locks: lock
+      group.all_covers: close_cover
+  - name: Power Down
+    entities:
+      group.all_lights: off
+      switch.living_room: off
+
+# Media
+media_player:
+  - platform: plex
+  - platform: onkyo
+    host: !secret onkyo_receiver_ip
+    name: receiver
+    sources:
+      network: 'Airplay'
+      video1: 'DVD Player'
+      video4: 'Wii-U'
+      video3: 'Apple TV'
+  - platform: vizio
+    host: !secret vizio_tv_ip
+    access_token: !secret vizio_tv_access_token
+  
+# ====================================
+# Communication Technologies
+# ====================================
+
+# Z-Wave
+zwave:
+  # Create symlink to USB device
+  # https://www.domoticz.com/wiki/PersistentUSBDevices
+  # Create docker image while enabling UDEV
+  # https://forums.balena.io/t/docker-container-cannot-access-dynamically-plugged-usb-devices/4277/13
+  # TRY THIS!
+  # https://community.home-assistant.io/t/mapping-z-wave-dongle-to-docker-homeassistant/63044/2
+  usb_path: /dev/ttyUSB-zwave
+  network_key: !secret zwave_network_key
+  
+zha:
+  usb_path: /dev/ttyUSB-zigbee
+  database_path: /config/zigbee.db
+ 
+# ====================================
+# Third party services
+# ====================================
+
+google_assistant:
+  project_id: !secret google_assistant_project_id
+  api_key: !secret google_assistant_api_key
+  exposed_domains:
+    - light
+    - switch
+    - scene
+  entity_config:
+    light.master_bedroom_north_light:
+      expose: false
+    light.master_bedroom_south_light:
+      expose: false
+  
+# Example configuration.yaml entry
+ios:
+  push:
+    categories:
+      - name: Alarm
+        identifier: 'alarm'
+        actions:
+          - identifier: 'SOUND_ALARM'
+            title: 'Sound Alarm'
+            activationMode: 'background'
+            authenticationRequired: yes
+            destructive: yes
+            behavior: 'default'
+          - identifier: 'SILENCE_ALARM'
+            title: 'Silence Alarm'
+            activationMode: 'background'
+            authenticationRequired: yes
+            destructive: no
+            behavior: 'textInput'
+            textInputButtonTitle: 'Silencio!'
+            textInputPlaceholder: 'Placeholder'
+
+homekit:
+  filter:
+    include_domains:
+      - switch
+      - light
+    include_entities:
+      - input_boolean.people_home
+
+aarlo:
+  username: !secret arlo_userename
+  password: !secret arlo_password
+  
+hacs:
+  token: !secret github_access_token
+  
+camera:
+  - platform: aarlo
+    ffmpeg_arguments: '-pred 1 -q:v 2'
+    
+stream:
+
+nest:
+  client_id: !secret nest_client_id
+  client_secret: !secret nest_client_secret
+  
+rachio:
+  api_key: !secret rachio_api_key
+  
+panel_iframe:
+  rachio:
+    title: Rachio
+    url: "https://app.rach.io"
+    icon: mdi:water-pump
+
+group: !include groups.yaml
+automation: !include automations.yaml
+script: !include scripts.yaml

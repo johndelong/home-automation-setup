@@ -1,0 +1,9 @@
+*.csr
+*.crt
+*.key
+
+zwcfg_*
+
+
+ip_bans.yaml
+secrets.yaml

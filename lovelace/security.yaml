@@ -1,0 +1,51 @@
+# Security Tab
+title: Security
+theme: Backend-selected
+panel: false
+
+badges:
+  - sensor.occupancy_state
+  - switch.siren
+cards:
+  - entity: alarm_control_panel.ha_alarm
+    name: Security Panel
+    states:
+      - arm_home
+      - arm_away
+    type: alarm-panel
+  - entities:
+      - entity: lock.front_door
+      - entity: cover.garage_door
+      - entity: binary_sensor.slider_door
+      - entity: binary_sensor.interior_garage_door
+    show_header_toggle: false
+    title: Entries
+    type: entities
+  - entities:
+      - entity: binary_sensor.mechanical_room_leak
+      - entity: sensor.basement_nest_protect_smoke_status
+      - entity: sensor.basement_nest_protect_co_status
+    show_header_toggle: false
+    title: Sensors
+    type: entities
+  - type: custom:decluttering-card
+    template: camera_card_template
+    variables:
+      - name: Front Door
+      - camera_entity: camera.aarlo_front_porch
+      - lock_entity: lock.front_door
+  - type: custom:decluttering-card
+    template: camera_card_template
+    variables:
+      - name: Front Yard
+      - camera_entity: camera.aarlo_front_yard
+  - type: custom:decluttering-card
+    template: camera_card_template
+    variables:
+      - name: Garage
+      - camera_entity: camera.aarlo_garage
+  - type: custom:decluttering-card
+    template: camera_card_template
+    variables:
+      - name: Backyard
+      - camera_entity: camera.aarlo_backyard

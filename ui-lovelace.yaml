@@ -1,0 +1,103 @@
+resources:
+  - type: module
+    url: /community_plugin/lovelace-hass-aarlo/hass-aarlo.js
+  - type: module
+    url: /community_plugin/monster-card/monster-card.js
+  - type: module
+    url: /community_plugin/decluttering-card/decluttering-card.js
+
+# Camera Card Template
+decluttering_templates:
+  camera_card_template:
+    default:
+      - lock_entity: null
+    card:
+      type: custom:aarlo-glance
+      entity: '[[camera_entity]]'
+      name: '[[name]]'
+      show:
+        - motion
+        - sound
+        - snapshot
+        - battery_level
+        - signal_strength
+        - captured_today
+        - image_date
+      top_title: true
+      top_status: true
+      top_date: true
+      image_click: play
+      door_lock: '[[lock_entity]]'
+    
+title: 4484 Burton Forest Ct SE
+views:
+  # Security Tab
+  - !include lovelace/security.yaml
+  # Home Tab
+  - badges:
+      - sensor.occupancy_state
+      - sensor.yr_symbol
+      - sun.sun
+    cards:
+      - entity: weather.dark_sky
+        type: weather-forecast
+      - entity: climate.living_room
+        type: thermostat
+      - entities:
+          - entity: sensor.living_room_thermostat_humidity
+          - entity: sensor.living_room_thermostat_temperature
+        title: Comfort
+        type: history-graph
+      - entities:
+          - light.family_room
+          - light.dining_room
+          - light.rec_room
+          - light.master_bedroom_north
+          - light.master_bedroom_south
+          - light.guest_bedroom_north
+          - light.guest_bedroom_south
+          - switch.living_room_lights
+          - switch.front_porch_lights
+        title: Light
+        type: entities
+    panel: false
+    path: default_view
+    title: Home
+  - badges: []
+    cards:
+      - entity: media_player.basement_tv
+        type: media-control
+      - entity: media_player.home
+        type: media-control
+      - content: Control all of the media in the house with just a few clicks!
+        title: Usage Instructions
+        type: markdown
+      - cards:
+          - entity: media_player.receiver
+            type: media-control
+          - entity: media_player.receiver_zone_2
+            type: media-control
+        type: vertical-stack
+    icon: ''
+    title: Media
+  - badges: []
+    cards:
+      - type: custom:monster-card
+        card:
+          type: entities
+          title: "Z-Wave Products"
+          show_header_toggle: false
+        filter:
+          include:
+            - entity_id: zwave.*
+      - entities:
+          - entity: sensor.google_wifi_status
+          - entity: sensor.google_wifi_uptime
+          - entity: sensor.google_wifi_last_restart
+          - entity: sensor.google_wifi_current_version
+          - entity: sensor.google_wifi_new_version
+          - entity: sensor.google_wifi_local_ip
+        show_header_toggle: false
+        title: Internet
+        type: entities
+    title: Technology

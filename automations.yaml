@@ -1,0 +1,166 @@
+- id: '1534036799047'
+  alias: People - Away
+  trigger:
+  - entity_id: input_boolean.people_home
+    platform: state
+    to: 'off'
+  condition: []
+  action:
+  - data:
+      entity_id:
+      - scene.lock_up
+      - scene.power_down
+      - scene.enable_activity_alerts
+    service: scene.turn_on
+  - data:
+      away_mode: away
+    service: nest.set_away_mode
+  - data:
+      message: Home was set to away mode.
+      title: Away
+    service: notify.ios_johns_iphone
+- id: '1534038560883'
+  alias: People - Home
+  trigger:
+  - entity_id: input_boolean.people_home
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      entity_id:
+      - scene.disable_activity_alerts
+    service: scene.turn_on
+  - data:
+      away_mode: home
+    service: nest.set_away_mode
+  - data:
+      message: Home was set to Home mode.
+      title: Home
+    service: notify.ios_johns_iphone
+- id: '1534641701462'
+  alias: It's getting late
+  trigger:
+  - at: '23:00'
+    platform: time
+  condition: []
+  action:
+  - data:
+      entity_id: scene.lock_up
+    service: scene.turn_on
+- id: '1541901783262'
+  alias: Sunrise
+  trigger:
+  - event: sunrise
+    platform: sun
+  condition: []
+  action:
+  - alias: ''
+    data:
+      entity_id: switch.front_porch_lights
+    service: switch.turn_off
+- id: '1541901870155'
+  alias: Sunset
+  trigger:
+  - event: sunset
+    platform: sun
+  condition: []
+  action:
+  - data:
+      entity_id: switch.front_porch_lights
+    service: switch.turn_on
+- id: '1542326348518'
+  alias: Unexpected Motion
+  trigger:
+  - entity_id: binary_sensor.aarlo_motion_garage
+    platform: state
+    to: 'on'
+  - entity_id: binary_sensor.aarlo_motion_front_porch
+    platform: state
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: input_boolean.people_home
+    state: 'off'
+  action:
+  - data:
+      data:
+        push:
+          category: alarm
+      message: Motion detected at home.
+      title: Unexpected Motion
+    service: notify.notify
+- id: '1542332023288'
+  alias: Alarm - Trigger while "Armed Away"
+  trigger:
+  - entity_id: binary_sensor.garage_motion
+    platform: state
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: alarm_control_panel.ha_alarm
+    state: armed_away
+  action:
+  - data:
+      entity_id: alarm_control_panel.ha_alarm
+    service: alarm_control_panel.alarm_trigger
+- id: '1542333950947'
+  alias: Alarm - Trigger Manually
+  trigger:
+  - event_data:
+      actionName: SOUND_ALARM
+    event_type: ios.notification_action_fired
+    platform: event
+  condition: []
+  action:
+  - data:
+      entity_id: alarm_control_panel.ha_alarm
+    service: alarm_control_panel.alarm_trigger
+- id: '1542334116219'
+  alias: Alarm - Triggered Actions
+  trigger:
+  - entity_id: alarm_control_panel.ha_alarm
+    platform: state
+    to: triggered
+  condition: []
+  action:
+  - data:
+      message: ALARM! The alarm has been triggered
+    service: notify.notify
+- id: '1542334997546'
+  alias: Alarm - Disarmed Actions
+  trigger:
+  - entity_id: alarm_control_panel.ha_alarm
+    platform: state
+    to: disarmed
+  condition: []
+  action:
+  - data:
+      entity_id: switch.wink_siren
+    service: switch.turn_off
+- id: '1545801775488'
+  alias: Water Leak Detection
+  trigger:
+  - entity_id: binary_sensor.mechanical_room_leak
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      message: There is a leak in the basement!
+      title: Leak Detected
+    service: notify.notify
+- id: '1550807760586'
+  alias: Rec Room Double Tap Up
+  trigger:
+  - event_data:
+      entity_id: zwave.rec_room_smart_dimmer
+      scene_data: 3
+      scene_id: 2
+    event_type: zwave.scene_activated
+    platform: event
+  condition: []
+  action:
+  - data:
+      entity_id: light.dining_room
+    service: light.turn_on
