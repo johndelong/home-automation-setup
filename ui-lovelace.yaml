@@ -60,6 +60,10 @@ views:
           - switch.front_porch_lights
         title: Light
         type: entities
+      - entities:
+          - input_boolean.windows_open
+        title: States
+        type: entities
     panel: false
     path: default_view
     title: Home

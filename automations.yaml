@@ -164,3 +164,94 @@
   - data:
       entity_id: light.dining_room
     service: light.turn_on
+- id: can_open_windows
+  alias: '[Thermal Energy - Push Notification] Open Windows'
+  trigger:
+  - entity_id: binary_sensor.can_use_thermal_energy
+    from: 'off'
+    platform: state
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: input_boolean.windows_open
+    state: 'off'
+  - after: 08:00:00
+    before: '22:00:00'
+    condition: time
+  action:
+  - data:
+      data:
+        push:
+          category: conserve_energy
+      message: It's nice outside! Would you like to save some energy and open the
+        windows?
+      title: Open Windows
+    service: notify.notify
+  - data:
+      entity_id: automation.can_open_windows
+    service: automation.turn_off
+  - delay: '12:00'
+  - data:
+      entity_id: automation.can_open_windows
+    service: automation.turn_on
+- id: '1566184256459'
+  alias: '[Thermal Energy - Push Action] Open Windows'
+  trigger:
+  - event_data:
+      actionName: YES_ACTION
+    event_type: ios.notification_action_fired
+    platform: event
+  condition:
+  - condition: state
+    entity_id: input_boolean.windows_open
+    state: 'off'
+  action:
+  - data:
+      entity_id: input_boolean.windows_open
+    service: input_boolean.turn_on
+- id: '1566184653353'
+  alias: '[Thermal Energy] Turn off HVAC'
+  trigger:
+  - entity_id: input_boolean.windows_open
+    from: 'off'
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      entity_id: climate.living_room
+    service: climate.turn_off
+- id: '1566264439433'
+  alias: '[Thermal Energy - Push Notification] Close Window'
+  trigger:
+  - entity_id: climate.living_room
+    from: 'off'
+    platform: state
+  condition:
+  - condition: state
+    entity_id: input_boolean.windows_open
+    state: 'on'
+  action:
+  - data:
+      data:
+        push:
+          category: conserve_energy
+      message: HVAC was turned on, but it looks like your windows might be open. Are
+        the windows closed?
+      title: Close Windows
+    service: notify.notify
+- id: '1566264959545'
+  alias: '[Thermal Energy - Push Action] Close Windows'
+  trigger:
+  - event_data:
+      actionName: YES_ACTION
+    event_type: ios.notification_action_fired
+    platform: event
+  condition:
+  - condition: state
+    entity_id: input_boolean.windows_open
+    state: 'on'
+  action:
+  - data:
+      entity_id: input_boolean.windows_open
+    service: input_boolean.turn_off

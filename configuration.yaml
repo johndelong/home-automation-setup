@@ -129,11 +129,32 @@ binary_sensor:
     monitored_conditions:
     - motion
     - sound
+  - platform: template
+    sensors:
+      can_use_thermal_energy:
+        friendly_name: "Can Use Thermal Energy"
+        value_template: >-
+          {% set forecast = state_attr("weather.dark_sky", "forecast") %}
+          {% set vars = namespace(canCoolNaturally=true, canHeatNaturally=true) %}
+          {% set desired_temp = state_attr("climate.living_room", "temperature") %}
+          {% set isCool = is_state("climate.living_room", "cool") or is_state("climate.living_room", "auto") %}
+          {% set isHeat = is_state("climate.living_room", "heat") or is_state("climate.living_room", "auto") %}
+          {% for item in forecast[0:5] %}
+            {%- if item.temperature > desired_temp or not isCool %}
+              {% set vars.canCoolNaturally = false %}
+            {%- endif -%}
+            {%- if item.temperature < desired_temp or not isHeat %}
+              {% set vars.canHeatNaturally = false %}
+            {%- endif -%}
+          {% endfor %}
+          {{ vars.canCoolNaturally or vars.canHeatNaturally }}
     
 input_boolean:
   people_home:
     name: Home
     icon: mdi:account
+  windows_open:
+    name: Windows Are Open
   
 scene:
   - name: Lock Up
@@ -217,6 +238,18 @@ ios:
             behavior: 'textInput'
             textInputButtonTitle: 'Silencio!'
             textInputPlaceholder: 'Placeholder'
+      - name: Conserve Energy
+        identifier: 'conserve_energy'
+        actions:
+          - identifier: 'YES_ACTION'
+            title: 'Yes'
+            activationMode: 'background'
+            authenticationRequired: yes
+            behavior: 'default'
+          - identifier: 'NO_ACTION'
+            title: 'No'
+            activationMode: 'background'
+            authenticationRequired: yes
 
 homekit:
   filter:
