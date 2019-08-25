@@ -1,0 +1,14 @@
+filter:
+    include_entities:
+      - light.dining_room
+      - light.family_room
+      - light.guest_bedroom_north
+      - light.guest_bedroom_south
+      - light.master_bedroom_north
+      - light.master_bedroom_south
+      - light.rec_room
+      
+      - switch.front_porch_lights
+      - switch.living_room_lights
+      
+      - input_boolean.people_home

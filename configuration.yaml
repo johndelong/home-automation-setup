@@ -61,8 +61,6 @@ logger:
 discovery:
   ignore:
     - apple_tv
-  #enable:
-  #  - homekit
 
 # Allows you to issue voice commands from the frontend in enabled browsers
 conversation:
@@ -204,18 +202,7 @@ zha:
 # Third party services
 # ====================================
 
-google_assistant:
-  project_id: !secret google_assistant_project_id
-  api_key: !secret google_assistant_api_key
-  exposed_domains:
-    - light
-    - switch
-    - scene
-  entity_config:
-    light.master_bedroom_north_light:
-      expose: false
-    light.master_bedroom_south_light:
-      expose: false
+google_assistant: !include assistants/google.yaml
   
 # Example configuration.yaml entry
 ios:
@@ -251,13 +238,7 @@ ios:
             activationMode: 'background'
             authenticationRequired: yes
 
-homekit:
-  filter:
-    include_domains:
-      - switch
-      - light
-    include_entities:
-      - input_boolean.people_home
+homekit: !include assistants/homekit.yaml
 
 aarlo:
   username: !secret arlo_userename

@@ -1,0 +1,11 @@
+project_id: !secret google_assistant_project_id
+api_key: !secret google_assistant_api_key
+secure_devices_pin: !secret secure_devices_pin
+exposed_domains:
+  - light
+  - scene
+entity_config:
+  switch.front_porch_lights:
+    expose: true
+  switch.living_room_lights:
+    expose: true
