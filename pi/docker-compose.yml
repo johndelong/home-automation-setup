@@ -1,0 +1,14 @@
+version: '3'
+services:
+  homeassistant:
+    container_name: home-assistant
+    image: homeassistant/home-assistant:latest
+    volumes:
+      - /home/pi/docker/home_assistant:/config
+    devices:
+      - /dev/ttyUSB-zigbee:/dev/ttyUSB-zigbee
+      - /dev/ttyUSB-zwave:/dev/ttyUSB-zwave
+    environment:
+      - TZ=America/Detroit
+    restart: unless-stopped
+    network_mode: host
