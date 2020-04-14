@@ -66,6 +66,7 @@ def publish_config(mqttc, topic, model, instance, mapping):
 
     config = mapping["config"].copy()
     config["state_topic"] = topic
+    config["unique_id"] = object_id
 
     print("publishing config: " + json.dumps(config))
     mqttc.publish(path, json.dumps(config))
