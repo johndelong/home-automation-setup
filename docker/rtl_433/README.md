@@ -19,7 +19,7 @@ Bus 003 Device 006: ID 0bda:2838 Realtek Semiconductor Corp. RTL2838 DVB-T
 # Build Docker Container
 
 ```bash
-docker run -itd --name rtl_433 --device=/dev/bus/usb/001/006 -e MQTT_IP='192.168.86.95' -e MPTT_USER='user' -e MQTT_PASSWORD='password' rtl_433
+docker run -itd --name rtl_433 --device=/dev/bus/usb/001/006 -e MQTT_IP='192.168.86.95' -e MQTT_USER='user' -e MQTT_PASSWORD='password' rtl_433
 ```
 
 # Notes:
