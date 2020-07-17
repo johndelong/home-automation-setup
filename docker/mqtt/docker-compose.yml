@@ -1,0 +1,10 @@
+version: '3'
+services:
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    volumes:
+      - /home/pi/docker/mqtt/:/mosquitto/
+    ports:
+      - "1883:1883"
