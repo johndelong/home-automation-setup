@@ -1,5 +1,7 @@
-import homeassistant.loader as loader
+# Built from the following example:
+# https://github.com/merbanan/rtl_433/blob/e9fbb92c2ee4948814c6fbdfb18902dcf3cd90df/examples/rtl_433_mqtt_hass.py
 
+import homeassistant.loader as loader
 import json
 
 # The domain of your component. Should be equal to the name of your component.
@@ -13,6 +15,7 @@ DEFAULT_TOPIC = "home-assistant/rf_mqtt"
 
 DISCOVERY_PREFIX = "homeassistant"
 
+message_debounce_count = {}
 discovered_devices = {}
 
 mappings = {
@@ -36,6 +39,16 @@ mappings = {
             "payload_off": "CLOSED",
             "payload_on": "OPEN",
             "value_template": "{{ value_json.switch1 }}"
+        }
+    },
+     "battery_ok": {
+        "device_type": "sensor",
+        "object_suffix": "B",
+        "config": {
+            "device_class": "battery",
+            "name": "Battery",
+            "unit_of_measurement": "%",
+            "value_template": "{{ float(value_json.battery_ok) * 99 + 1 }}"
         }
     },
 }

@@ -31,7 +31,7 @@ This will give you a list of containers and their IDs. Using that ID you can the
 
 Shell
 ```
-docker exec -it <containerID> bash
+docker exec -it <containerID> sh
 ```
 Replacing <containerID> with the container of your Mosquitto container will give you a command line. Alternatively, you can use Portainer to connect directly to the console.
 

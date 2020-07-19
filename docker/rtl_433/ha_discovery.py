@@ -3,11 +3,13 @@ import paho.mqtt.client as mqtt
 
 import time
 import json
+import os
 
 DISCOVERY_PREFIX = "homeassistant"
-DISCOVERY_REFRESH_INTERVAL = 600  # Seconds before refreshing the discovery
+DEFAULT_TOPIC = "rtl_433/events/#"
+DEFAULT_MQTT_PORT = 1883
 
-discovery_timeouts = {}
+discovered_devices = {}
 
 mappings = {
     "motion": {
@@ -32,6 +34,16 @@ mappings = {
             "value_template": "{{ value_json.switch1 }}"
         }
     },
+     "battery_ok": {
+        "device_type": "sensor",
+        "object_suffix": "B",
+        "config": {
+            "device_class": "battery",
+            "name": "Battery",
+            "unit_of_measurement": "%",
+            "value_template": "{{ float(value_json.battery_ok) * 99 + 1 }}"
+        }
+    },
 }
 
 def sanitize(text):
@@ -43,33 +55,28 @@ def sanitize(text):
             .replace("&", ""))
 
 def publish_config(mqttc, topic, model, instance, mapping):
-    now = time.time()
-
-    # print("Model: " + model)
-    # print("Instance: " + instance)
-    # print("Mapping: " + json.dumps(mapping))    
-
     """Publish Home Assistant auto discovery data."""
+    global discovered_devices
+
     device_type = mapping["device_type"]
     object_suffix = mapping["object_suffix"]
     object_id = "-".join([model, instance, object_suffix])
 
-    path = "/".join([DISCOVERY_PREFIX, device_type, object_id, "config"])
+    discoveryPrefix = os.getenv("HA_DISCOVERY_PREFIX", DISCOVERY_PREFIX)
 
-    # check timeout to see if we should home assistant another config message
-    global discovery_timeouts
-    if path in discovery_timeouts and discovery_timeouts[path] > now:
+    path = "/".join([discoveryPrefix, device_type, object_id, "config"])
+
+    # Check if we've already configured this device
+    if discovered_devices.get(path) != None:
         return
-        
-    # update the refresh interval
-    discovery_timeouts[path] = now + DISCOVERY_REFRESH_INTERVAL
+
+    discovered_devices[path] = True
 
     config = mapping["config"].copy()
     config["state_topic"] = topic
+    config["unique_id"] = object_id
 
-    print("\n=======================")
-    print("Path: " + path)
-    print("Config: " + json.dumps(config))
+    print("publishing config: " + json.dumps(config))
     mqttc.publish(path, json.dumps(config))
     
 def bridge_event_to_hass(mqttc, topic, data):
@@ -102,12 +109,15 @@ def bridge_event_to_hass(mqttc, topic, data):
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    print("Connected with result code " + str(rc))
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     # client.subscribe("$SYS/#")
-    client.subscribe("rtl_433/events/#")
+
+    topic = os.getenv('MQTT_SUB_TOPIC', DEFAULT_TOPIC)
+
+    client.subscribe(topic)
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
@@ -129,12 +139,18 @@ def on_message(client, userdata, msg):
 
 def main():
     client = mqtt.Client()
-    client.username_pw_set(username="ha_broker",password="C0nn3ctM3!")
+    client.username_pw_set(
+        username=os.getenv('MQTT_USER'),
+        password=os.getenv('MQTT_PASSWORD')
+    )
 
     client.on_connect = on_connect
     client.on_message = on_message
 
-    client.connect("192.168.86.95", 1883, 60)
+    port = os.getenv('MQTT_PORT', DEFAULT_MQTT_PORT)
+    ip = os.getenv('MQTT_IP')
+
+    client.connect(ip, port, 60)
 
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.
