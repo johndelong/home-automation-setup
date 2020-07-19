@@ -13,9 +13,11 @@ RUN git clone https://github.com/merbanan/rtl_433.git
 
 # Copy Resources
 COPY build.sh .
-COPY rtl_start.sh .
 
 # Build rtl_433
 RUN ./build.sh
 
+COPY ha_discovery.py .
+
+COPY rtl_start.sh .
 CMD ./rtl_start.sh
