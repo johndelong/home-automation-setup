@@ -8,7 +8,7 @@ WORKDIR /tmp/
 
 # Get the dependencies
 RUN apt-get update
-RUN apt-get install -y git libtool libusb-1.0-0-dev librtlsdr-dev rtl-sdr build-essential autoconf cmake pkg-config python3 python3-pip
+RUN apt-get install -y git libtool libusb-1.0-0-dev librtlsdr-dev rtl-sdr build-essential autoconf cmake pkg-config
 RUN git clone https://github.com/merbanan/rtl_433.git
 
 # Copy Resources

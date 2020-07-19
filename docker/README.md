@@ -20,6 +20,11 @@ Run a command inside a docker container
 docker exec -it <containerID> sh
 ```
 
+Get logs for a docker container
+```bash
+docker logs <containerID>
+```
+
 List running docker containers
 ```bash
 docker ps
@@ -38,4 +43,15 @@ docker system prune -a
 Build a docker image using the files in the local directory
 ```bash
 docker build -t <imageName> .
+```
+
+## Common Arguments
+???
+```bash
+-it
+```
+
+Run the container detached
+```bash
+-d
 ```

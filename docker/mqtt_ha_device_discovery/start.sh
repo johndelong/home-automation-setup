@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 ha_discovery.py
+python3 discovery.py
