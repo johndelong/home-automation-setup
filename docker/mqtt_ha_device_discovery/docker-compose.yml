@@ -1,0 +1,10 @@
+version: "3"
+services:
+  mqtt_ha_device_discovery:
+    container_name: mqtt_ha_device_discovery
+    image: mqtt_ha_device_discovery
+    restart: unless-stopped
+    environment:
+      - MQTT_USER='user'
+      - MQTT_PASSWORD='password'
+      - MQTT_IP='192.168.86.191'

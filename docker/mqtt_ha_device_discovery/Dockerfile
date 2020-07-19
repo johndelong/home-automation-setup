@@ -8,14 +8,9 @@ WORKDIR /tmp/
 
 # Get the dependencies
 RUN apt-get update
-RUN apt-get install -y git libtool libusb-1.0-0-dev librtlsdr-dev rtl-sdr build-essential autoconf cmake pkg-config python3 python3-pip
-RUN git clone https://github.com/merbanan/rtl_433.git
+RUN apt-get install -y python3 python3-pip
 
-# Copy Resources
-COPY build.sh .
-
-# Build rtl_433
-RUN ./build.sh
+COPY discovery.py .
 
 # Copy and execute the start script
 COPY start.sh .
