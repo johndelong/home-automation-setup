@@ -22,6 +22,11 @@ Bus 003 Device 006: ID 0bda:2838 Realtek Semiconductor Corp. RTL2838 DVB-T
 docker run -itd --name rtl_433 --device=/dev/bus/usb/001/006 -e MQTT_IP='192.168.86.95' -e MQTT_USER='user' -e MQTT_PASSWORD='password' rtl_433
 ```
 
+With Docker Compose
+```
+docker-compose up -d
+```
+
 # Notes:
 
 You may need to update the file permissions for the bash files

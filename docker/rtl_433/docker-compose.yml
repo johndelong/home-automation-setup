@@ -1,8 +1,12 @@
 version: "3"
 services:
-  homeassistant:
+  rtl_433:
     container_name: rtl_433
     image: rtl_433
     devices:
-      - /dev/bus/usb/001/006
+      - /dev/bus/usb/001/005
     restart: unless-stopped
+    environment:
+      - MQTT_USER='user'
+      - MQTT_PASSWORD='password'
+      - MQTT_IP='192.168.86.191'

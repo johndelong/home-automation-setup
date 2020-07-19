@@ -9,7 +9,13 @@ DISCOVERY_PREFIX = "homeassistant"
 DEFAULT_TOPIC = "rtl_433/events/#"
 DEFAULT_MQTT_PORT = 1883
 
-discovered_devices = {}
+# Seconds before refreshing the discovery
+# Because HA needs to know of new devices that are discovered, we send out
+# discovery messages every {DISCOVERY_INTERVAL} seconds to make sure HA
+# knows about this device. This is especially useful for new instances
+# of HA that are being started up for the first time.
+DISCOVERY_INTERVAL = 600  
+discovery_timeouts = {}
 
 mappings = {
     "motion": {
@@ -56,7 +62,7 @@ def sanitize(text):
 
 def publish_config(mqttc, topic, model, instance, mapping):
     """Publish Home Assistant auto discovery data."""
-    global discovered_devices
+    global discovery_timeouts
 
     device_type = mapping["device_type"]
     object_suffix = mapping["object_suffix"]
@@ -66,11 +72,13 @@ def publish_config(mqttc, topic, model, instance, mapping):
 
     path = "/".join([discoveryPrefix, device_type, object_id, "config"])
 
-    # Check if we've already configured this device
-    if discovered_devices.get(path) != None:
-        return
+    # check timeout
+    now = time.time()
+    if path in discovery_timeouts:
+        if discovery_timeouts[path] > now:
+            return
 
-    discovered_devices[path] = True
+    discovery_timeouts[path] = now + DISCOVERY_INTERVAL
 
     config = mapping["config"].copy()
     config["state_topic"] = topic
