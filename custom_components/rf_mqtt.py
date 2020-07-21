@@ -1,8 +1,9 @@
 # Built from the following example:
 # https://github.com/merbanan/rtl_433/blob/e9fbb92c2ee4948814c6fbdfb18902dcf3cd90df/examples/rtl_433_mqtt_hass.py
 
-import homeassistant.loader as loader
 import json
+import logging
+import time
 
 # The domain of your component. Should be equal to the name of your component.
 DOMAIN = "rf_mqtt"
@@ -10,13 +11,23 @@ DOMAIN = "rf_mqtt"
 # List of integration names (string) your integration depends upon.
 DEPENDENCIES = ["mqtt"]
 
-CONF_TOPIC = "topic"
-DEFAULT_TOPIC = "home-assistant/rf_mqtt"
+CONF_SUB_TOPIC = "sub_topic"
+CONF_PUB_TOPIC = "pub_topic"
+CONF_DEBOUNCE = "debounce"
 
 DISCOVERY_PREFIX = "homeassistant"
 
-message_debounce_count = {}
-discovered_devices = {}
+_LOGGER = logging.getLogger(__name__)
+
+g_sub_topic = ""
+g_pub_topic = ""
+
+# Devices already "discovered" and sent to HA
+g_discovered_devices = {}
+
+# Devices that should be debounced
+g_debounce_devices = {}
+g_debounced_messages = {}
 
 mappings = {
     "motion": {
@@ -63,7 +74,7 @@ def sanitize(text):
 
 def publish_config(mqttc, topic, model, instance, mapping):
     """Publish Home Assistant auto discovery data."""
-    global discovered_devices
+    global g_discovered_devices
 
     device_type = mapping["device_type"]
     object_suffix = mapping["object_suffix"]
@@ -72,17 +83,54 @@ def publish_config(mqttc, topic, model, instance, mapping):
     path = "/".join([DISCOVERY_PREFIX, device_type, object_id, "config"])
 
     # Check if we've already configured this device
-    if discovered_devices.get(path) != None:
+    if g_discovered_devices.get(path) != None:
         return
 
-    discovered_devices[path] = True
+    g_discovered_devices[path] = True
 
     config = mapping["config"].copy()
-    config["state_topic"] = topic
+    config["state_topic"] = "/".join([g_pub_topic, topic])
     config["unique_id"] = object_id
 
-    print("publishing config: " + json.dumps(config))
+    _LOGGER.info("publishing config: " + json.dumps(config))
     mqttc.publish(path, json.dumps(config))
+
+def debounce(mqttc, topic, debounce_count, data):
+    global g_debounced_messages
+
+    _LOGGER.info("Data:" + json.dumps(data))
+    _LOGGER.info("Topic: " + topic)
+
+    device_id = data["id"]
+    raw_msg = data["raw_message"]
+
+    now = time.time()
+    blank = {"raw_msg": raw_msg, "count": 0, "updated": now}
+
+    message = g_debounced_messages.get(device_id, blank)
+
+    if message["updated"] - now > 5:
+        _LOGGER.info("Message too old. Resetting debounce count.")
+        g_debounced_messages[device_id] = blank
+
+    # Increment the number of times we've seen this message
+    if message["raw_msg"] == raw_msg:
+        message["count"] += 1
+        _LOGGER.info("We've seen this message before %s of %s", message["count"], debounce_count)
+    else:
+        # There is a new message we should start debouncing
+        message["raw_msg"] = raw_msg
+        message["count"] = 1
+        _LOGGER.info("This is the first time we've seen this message")
+
+    # Save this entry so we can refer to it later
+    g_debounced_messages[device_id] = message
+
+    if message["count"] >= debounce_count:
+        _LOGGER.info("Successfully debounced - Sending message!")
+        mqttc.publish(topic, json.dumps(data))
+    else:
+        _LOGGER.info("Messaged is being held. Nothing sent.")
     
 def bridge_event_to_hass(mqttc, topic, data):
     """Translate some rtl_433 sensor data to Home Assistant auto discovery."""
@@ -99,7 +147,7 @@ def bridge_event_to_hass(mqttc, topic, data):
         device_id = str(data["id"])
         instance = device_id
     if not instance:
-        print("No unique identifier found...")
+        _LOGGER.info("No unique identifier found...")
         # no unique device identifier
         return
 
@@ -111,29 +159,52 @@ def bridge_event_to_hass(mqttc, topic, data):
         if key in mappings:
             publish_config(mqttc, topic, model, instance, mappings[key])
 
+        pub_topic = "/".join([g_pub_topic, topic])
+
+        if key in g_debounce_devices:
+            # Debounce this message
+            debounce_count = g_debounce_devices[key]
+            debounce(mqttc, pub_topic, debounce_count, data)
+        else:
+            # Just send the message on the alterted topic
+            mqttc.publish(pub_topic, json.dumps(data))
+
 def setup(hass, config):
     """Set up the Hello MQTT component."""
     mqtt = hass.components.mqtt
-    topic = config[DOMAIN].get(CONF_TOPIC, DEFAULT_TOPIC)
+
+    global g_debounce_devices
+    g_debounce_devices = config[DOMAIN].get(CONF_DEBOUNCE)
+
+    global g_sub_topic, g_pub_topic
+    g_sub_topic = config[DOMAIN].get(CONF_SUB_TOPIC)
+    g_pub_topic = config[DOMAIN].get(CONF_PUB_TOPIC)
+
+    if g_sub_topic == None:
+        _LOGGER.error("No subscription topic specified for mqtt!")
+        return False
+
+    if g_pub_topic == None:
+        _LOGGER.error("No publish topic specified for mqtt!")
 
     # Listener to be called when we receive a message.
     # The msg parameter is a Message object with the following members:
     # - topic, payload, qos, retain
     def message_received(msg):
-        print("Received Message: " + msg.payload)    
+        _LOGGER.info("Received Message: " + msg.payload)    
 
         """Callback for MQTT message PUBLISH."""
         try:
             # Decode JSON payload
             data = json.loads(msg.payload)
             bridge_event_to_hass(mqtt, msg.topic, data)
-    
+
         except json.decoder.JSONDecodeError:
-            print("JSON decode error: " + msg.payload)
+            _LOGGER.info("JSON decode error: " + msg.payload)
             return
         
     # Subscribe our listener to a topic.
-    mqtt.subscribe(topic, message_received)
+    mqtt.subscribe(g_sub_topic, message_received)
 
     # Return boolean to indicate that initialization was successfully.
     return True
