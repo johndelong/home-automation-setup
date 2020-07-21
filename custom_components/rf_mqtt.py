@@ -124,6 +124,7 @@ def debounce(mqttc, topic, debounce_count, data):
         _LOGGER.info("This is the first time we've seen this message")
 
     # Save this entry so we can refer to it later
+    message["updated"] = now
     g_debounced_messages[device_id] = message
 
     if message["count"] >= debounce_count:
