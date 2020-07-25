@@ -29,7 +29,7 @@ g_discovered_devices = {}
 g_debounce_devices = {}
 g_debounced_messages = {}
 
-mappings = {
+recognized_devices = {
     "motion": {
         "device_type": "binary_sensor",
         "object_suffix": "M",
@@ -89,17 +89,14 @@ def publish_config(mqttc, topic, model, instance, mapping):
     g_discovered_devices[path] = True
 
     config = mapping["config"].copy()
-    config["state_topic"] = "/".join([g_pub_topic, topic])
+    config["state_topic"] = topic
     config["unique_id"] = object_id
 
-    _LOGGER.info("publishing config: " + json.dumps(config))
+    _LOGGER.info("Publishing config: " + json.dumps(config))
     mqttc.publish(path, json.dumps(config))
 
 def debounce(mqttc, topic, debounce_count, data):
     global g_debounced_messages
-
-    _LOGGER.info("Data:" + json.dumps(data))
-    _LOGGER.info("Topic: " + topic)
 
     device_id = data["id"]
     raw_msg = data["raw_message"]
@@ -107,39 +104,39 @@ def debounce(mqttc, topic, debounce_count, data):
     now = time.time()
     blank = {"raw_msg": raw_msg, "count": 0, "updated": now}
 
-    message = g_debounced_messages.get(device_id, blank)
+    msg_count = g_debounced_messages.get(device_id, blank)
 
-    if message["updated"] - now > 5:
-        _LOGGER.info("Message too old. Resetting debounce count.")
+    # If message is older than 2 seconds, restart the debounce
+    if now - msg_count["updated"] > 2:
         g_debounced_messages[device_id] = blank
 
     # Increment the number of times we've seen this message
-    if message["raw_msg"] == raw_msg:
-        message["count"] += 1
-        _LOGGER.info("We've seen this message before %s of %s", message["count"], debounce_count)
+    if msg_count["raw_msg"] == raw_msg:
+        msg_count["count"] += 1
     else:
         # There is a new message we should start debouncing
-        message["raw_msg"] = raw_msg
-        message["count"] = 1
-        _LOGGER.info("This is the first time we've seen this message")
+        msg_count["raw_msg"] = raw_msg
+        msg_count["count"] = 1
 
     # Save this entry so we can refer to it later
-    message["updated"] = now
-    g_debounced_messages[device_id] = message
+    g_debounced_messages[device_id] = msg_count
 
-    if message["count"] >= debounce_count:
-        _LOGGER.info("Successfully debounced - Sending message!")
-        mqttc.publish(topic, json.dumps(data))
-    else:
-        _LOGGER.info("Messaged is being held. Nothing sent.")
+    _LOGGER.info("Debouncing message (" + str(msg_count["count"]) + " of " + str(debounce_count) + ") to topic: " + topic)
+
+    if msg_count["count"] >= debounce_count:
+        message = json.dumps(data)
+        _LOGGER.info("Publishing (debounced) message to topic: " + topic + "\n" + message)
+        mqttc.publish(topic, message)
     
-def bridge_event_to_hass(mqttc, topic, data):
+def bridge_event_to_hass(mqttc, original_topic, data):
     """Translate some rtl_433 sensor data to Home Assistant auto discovery."""
 
     if "model" not in data:
         # not a device event
         return
+
     model = sanitize(data["model"])
+    topic = "/".join([g_pub_topic, original_topic])
 
     if "channel" in data:
         channel = str(data["channel"])
@@ -152,23 +149,31 @@ def bridge_event_to_hass(mqttc, topic, data):
         # no unique device identifier
         return
 
-    # detect known attributes
+    # Look for known attributes in this message and configure devices
     for key in data.keys():
         if key == "subtype":
             key = data[key]
 
-        if key in mappings:
-            publish_config(mqttc, topic, model, instance, mappings[key])
+        if key in recognized_devices:
+            publish_config(mqttc, topic, model, instance, recognized_devices[key])
 
-        pub_topic = "/".join([g_pub_topic, topic])
+    # Check if this message should be debounced
+    did_debounce = False
+    for key in data.keys():
+        if key == "subtype":
+            key = data[key]
 
         if key in g_debounce_devices:
             # Debounce this message
-            debounce_count = g_debounce_devices[key]
-            debounce(mqttc, pub_topic, debounce_count, data)
-        else:
-            # Just send the message on the alterted topic
-            mqttc.publish(pub_topic, json.dumps(data))
+            debounce(mqttc, topic, g_debounce_devices[key], data)
+            did_debounce = True
+            break
+    
+    if did_debounce == False:
+        # Just send the message on the alterted topic
+        message = json.dumps(data)
+        _LOGGER.info("Publishing (non-debounced) message to topic: " + topic + "\n" + message)
+        mqttc.publish(topic, message)
 
 def setup(hass, config):
     """Set up the Hello MQTT component."""
@@ -176,6 +181,8 @@ def setup(hass, config):
 
     global g_debounce_devices
     g_debounce_devices = config[DOMAIN].get(CONF_DEBOUNCE)
+
+    _LOGGER.info("Loaded devices to be debounced: " + str(g_debounce_devices))
 
     global g_sub_topic, g_pub_topic
     g_sub_topic = config[DOMAIN].get(CONF_SUB_TOPIC)
@@ -192,7 +199,7 @@ def setup(hass, config):
     # The msg parameter is a Message object with the following members:
     # - topic, payload, qos, retain
     def message_received(msg):
-        _LOGGER.info("Received Message: " + msg.payload)    
+        _LOGGER.info("Received message on topic: " + msg.topic + "\n" + msg.payload)    
 
         """Callback for MQTT message PUBLISH."""
         try:
@@ -209,5 +216,3 @@ def setup(hass, config):
 
     # Return boolean to indicate that initialization was successfully.
     return True
-    
-
