@@ -1,5 +1,9 @@
 Based of [this repo](https://github.com/LinuxChristian/rtl_433-docker)
 
+# Install Driver for RTL-SDR Dongle
+https://tinjaw.com/2017/09/17/using-nooelec-nesdr-smart-on-a-raspberry-pi/
+
+
 # Build Docker Image
 
 ```bash
