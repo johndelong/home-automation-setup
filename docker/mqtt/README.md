@@ -39,7 +39,7 @@ From the console run something similar to:
 
 Shell
 ```
-mosquitto_passwd -c /mqtt/config/credentials <username
+mosquitto_passwd -c /mosquitto/config/credentials <username
 ```
 With appropriate filename and username arguments, this command will ask for a password and then create a hashed password file. Then you need to update your Mosquitto config.
 
