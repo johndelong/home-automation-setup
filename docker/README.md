@@ -55,3 +55,8 @@ Run the container detached
 ```bash
 -d
 ```
+
+If your container keeps restarting an you are not sure why, try looking at the logs like this:
+```bash
+docker logs --tail 50 --follow --timestamps {container_name}
+```
