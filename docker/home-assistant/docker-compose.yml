@@ -5,10 +5,11 @@ services:
     image: homeassistant/home-assistant:latest
     volumes:
       - /home/pi/docker/home_assistant:/config
+      - /etc/localtime:/etc/localtime:ro
     devices:
-      - /dev/ttyUSB-zigbee:/dev/ttyUSB-zigbee
+      - /dev/ttyUSB-zigbee
+      - /dev/ttyUSB-zwave
     environment:
       - TZ=America/Detroit
     restart: unless-stopped
     network_mode: host
-    privileged: true
