@@ -1,0 +1,10 @@
+{
+  "domain": "rf_mqtt",
+  "name": "RF MQTT",
+  "documentation": "https://github.com/johndelong/home-assistant-config/blob/master/custom_components/rf_mqtt.py",
+  "dependencies": ["mqtt"],
+  "codeowners": [],
+  "requirements": [],
+  "iot_class": "local_polling",
+  "version": "1.0.0"
+}
