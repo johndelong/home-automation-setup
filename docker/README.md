@@ -45,6 +45,11 @@ Build a docker image using the files in the local directory
 docker build -t <imageName> .
 ```
 
+Create a container from Docker Compose
+```bash
+docker-compose up -d
+```
+
 ## Common Arguments
 ???
 ```bash
