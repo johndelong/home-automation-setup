@@ -72,7 +72,7 @@ def sanitize(text):
             .replace(".", "_")
             .replace("&", ""))
 
-def publish_config(mqttc, topic, model, instance, mapping):
+def publish_config(hass, mqttc, topic, model, instance, mapping):
     """Publish Home Assistant auto discovery data."""
     global g_discovered_devices
 
@@ -93,9 +93,9 @@ def publish_config(mqttc, topic, model, instance, mapping):
     config["unique_id"] = object_id
 
     _LOGGER.info("Publishing config: " + json.dumps(config))
-    mqttc.publish(path, json.dumps(config))
+    mqttc.publish(hass, path, json.dumps(config))
 
-def debounce(mqttc, topic, debounce_count, data):
+def debounce(hass, mqttc, topic, debounce_count, data):
     global g_debounced_messages
 
     device_id = data["id"]
@@ -126,9 +126,9 @@ def debounce(mqttc, topic, debounce_count, data):
     if msg_count["count"] >= debounce_count:
         message = json.dumps(data)
         _LOGGER.info("Publishing (debounced) message to topic: " + topic + "\n" + message)
-        mqttc.publish(topic, message)
+        mqttc.publish(hass, topic, message)
     
-def bridge_event_to_hass(mqttc, original_topic, data):
+def bridge_event_to_hass(hass, mqttc, original_topic, data):
     """Translate some rtl_433 sensor data to Home Assistant auto discovery."""
 
     if "model" not in data:
@@ -155,7 +155,7 @@ def bridge_event_to_hass(mqttc, original_topic, data):
             key = data[key]
 
         if key in recognized_devices:
-            publish_config(mqttc, topic, model, instance, recognized_devices[key])
+            publish_config(hass, mqttc, topic, model, instance, recognized_devices[key])
 
     # Check if this message should be debounced
     did_debounce = False
@@ -165,7 +165,7 @@ def bridge_event_to_hass(mqttc, original_topic, data):
 
         if key in g_debounce_devices:
             # Debounce this message
-            debounce(mqttc, topic, g_debounce_devices[key], data)
+            debounce(hass, mqttc, topic, g_debounce_devices[key], data)
             did_debounce = True
             break
     
@@ -173,7 +173,7 @@ def bridge_event_to_hass(mqttc, original_topic, data):
         # Just send the message on the alterted topic
         message = json.dumps(data)
         _LOGGER.info("Publishing (non-debounced) message to topic: " + topic + "\n" + message)
-        mqttc.publish(topic, message)
+        mqttc.publish(hass, topic, message)
 
 def setup(hass, config):
     """Set up the Hello MQTT component."""
@@ -205,7 +205,7 @@ def setup(hass, config):
         try:
             # Decode JSON payload
             data = json.loads(msg.payload)
-            bridge_event_to_hass(mqtt, msg.topic, data)
+            bridge_event_to_hass(hass, mqtt, msg.topic, data)
 
         except json.decoder.JSONDecodeError:
             _LOGGER.info("JSON decode error: " + msg.payload)
